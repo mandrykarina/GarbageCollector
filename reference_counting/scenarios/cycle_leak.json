@@ -1,0 +1,7 @@
+[
+  {"op": "allocate", "id": 1},
+  {"op": "allocate", "id": 2},
+  {"op": "add_ref", "from": 1, "to": 2},
+  {"op": "add_ref", "from": 2, "to": 1},
+  {"op": "remove_ref", "from": 1, "to": 2}
+]

@@ -4,7 +4,7 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
-#include <algorithm>
+
 #include "rc_object.h"
 #include "event_logger.h"
 
@@ -17,6 +17,9 @@
  * - Каскадное удаление объектов когда ref_count достигает 0
  * - Обнаружение циклических ссылок (которые вызывают утечку памяти)
  * - Логирование всех операций
+ *
+ * **ВАЖНО: В этой версии НЕ удаляем автоматически в цикле!**
+ * **Только ref_count == 0 -> удаляем. Это показывает проблему RC с циклами!**
  */
 class ReferenceCounter
 {
@@ -44,10 +47,6 @@ public:
      */
     bool remove_ref(int from, int to);
 
-private:
-    std::unordered_map<int, RCObject> &heap;
-    EventLogger &logger;
-
     /**
      * @brief Выполнить каскадное удаление объекта и его зависимостей
      *
@@ -58,6 +57,10 @@ private:
      * @param visited Множество уже посещённых объектов (для предотвращения циклов)
      */
     void cascade_delete(int obj_id, std::unordered_set<int> &visited);
+
+private:
+    std::unordered_map<int, RCObject> &heap;
+    EventLogger &logger;
 
     /**
      * @brief Проверить, находится ли цикл в графе ссылок

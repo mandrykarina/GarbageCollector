@@ -2,9 +2,10 @@
 #define RC_HEAP_H
 
 #include <unordered_map>
-#include <string>
+#include <unordered_set>
 #include <vector>
-#include <iostream>
+#include <string>
+
 #include "rc_object.h"
 #include "reference_counter.h"
 #include "event_logger.h"
@@ -15,23 +16,24 @@
  */
 struct ScenarioOp
 {
-    std::string op; // "allocate", "add_ref", "remove_ref"
+    std::string op; // "allocate", "add_ref", "remove_ref", "delete_root"
     int id;         // Для allocate
     int from;       // Для add_ref и remove_ref
     int to;         // Для add_ref и remove_ref
 
     ScenarioOp() : op(""), id(-1), from(-1), to(-1) {}
-
     ScenarioOp(const std::string &op_, int id_, int from_ = -1, int to_ = -1)
         : op(op_), id(id_), from(from_), to(to_) {}
 };
 
 /**
  * @class RCHeap
- * @brief Управляет кучей объектов с подсчётом ссылок
+ * @brief Управляет кучей объектов с подсчётом ссылок и корнями
  *
- * Инкапсулирует управление памятью, добавление/удаление ссылок
- * и визуализацию состояния кучи.
+ * Инкапсулирует управление памятью, добавление/удаление ссылок,
+ * управление корнями (roots) и визуализацию состояния кучи.
+ *
+ * **ВАЖНО: RC ONLY! Только объекты с ref_count == 0 удаляются!**
  */
 class RCHeap
 {
@@ -48,6 +50,20 @@ public:
      * @return true, если объект успешно выделен
      */
     bool allocate(int obj_id);
+
+    /**
+     * @brief Добавить объект в корни (root)
+     * @param obj_id ID объекта для добавления в корни
+     * @return true, если объект добавлен в корни
+     */
+    bool add_root(int obj_id);
+
+    /**
+     * @brief Удалить объект из корней (root)
+     * @param obj_id ID объекта для удаления из корней
+     * @return true, если объект удалён из корней
+     */
+    bool remove_root(int obj_id);
 
     /**
      * @brief Добавить ссылку от одного объекта к другому
@@ -100,13 +116,20 @@ public:
     /**
      * @brief Обнаружить и зарегистрировать утечки памяти
      *
-     * Проверяет все объекты в куче с ref_count > 0 которые не имеют
-     * входящих ссылок (потенциальные циклы)
+     * Проверяет все объекты в куче с ref_count > 0 (которые не удалены)
+     * Это объекты, участвующие в циклических ссылках!
      */
     void detect_and_log_leaks();
 
+    /**
+     * @brief Получить количество корней
+     * @return Размер множества корней
+     */
+    size_t get_roots_count() const { return roots.size(); }
+
 private:
     std::unordered_map<int, RCObject> objects; ///< Куча объектов
+    std::unordered_set<int> roots;             ///< Корни (root объекты)
     ReferenceCounter rc;                       ///< Управление ссылками
     EventLogger &logger;                       ///< Логгер событий
 
